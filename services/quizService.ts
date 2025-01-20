@@ -131,7 +131,7 @@ class QuizService {
         return quizData;
     }
 
-    async startQuiz(quizAddress: string, creatorAddress: string, pin: string) {
+    async startQuiz(quizAddress: string, creatorAddress: string, pin: string, _playerAddresses: string[]) {
         try {
             const quizData = await this.getQuizByPin(pin);
             if (!quizData) {
@@ -146,6 +146,8 @@ class QuizService {
             if (isStarted) {
                 throw new Error('Quiz already started');
             }
+
+            quizData.playerAddresses = _playerAddresses;
             
             const tx = await quiz.startQuiz(quizData.playerAddresses);
             const receipt = await tx.wait();
@@ -210,10 +212,10 @@ class QuizService {
             return { 
                 winner, 
                 score: score.toString(),
-                allScores: players.map((addr, i) => ({
-                    address: addr,
-                    score: scores[i]
-                }))
+                // allScores: players.map((addr, i) => ({
+                //     address: addr,
+                //     score: scores[i]
+                // }))
             };
         } catch (error) {
             console.error('Error ending quiz:', error);
@@ -248,8 +250,8 @@ app.get('/api/quiz/:pin', async (req, res) => {
 
 app.post('/api/quiz/start', async (req, res) => {
     try {
-        const { quizAddress, creatorAddress, pin } = req.body;
-        const result = await quizService.startQuiz(quizAddress, creatorAddress, pin);
+        const { quizAddress, creatorAddress, pin, playerAddresses } = req.body;
+        const result = await quizService.startQuiz(quizAddress, creatorAddress, pin, playerAddresses);
         res.json(result);
     } catch (error) {
         res.status(500).json({ error: error.message });
