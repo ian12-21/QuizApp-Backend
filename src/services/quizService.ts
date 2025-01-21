@@ -40,7 +40,7 @@ interface QuizContract extends ethers.BaseContract {
     isFinished(): Promise<boolean>;
 }
 
-class QuizService {
+export class QuizService {
     private factory: QuizFactoryContract;
     private quizPins: Map<string, {
         quizAddress: string,
@@ -223,57 +223,3 @@ class QuizService {
         }
     }
 }
-// API endpoints
-const quizService = new QuizService();
-
-app.post('/api/quiz/create', async (req, res) => {
-    try {
-        const { creatorAddress, questions } = req.body;
-        const result = await quizService.createQuiz(
-            creatorAddress,
-            questions,
-        );
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/quiz/:pin', async (req, res) => {
-    try {
-        const result = await quizService.getQuizByPin(req.params.pin);
-        res.json(result);
-    } catch (error) {
-        res.status(404).json({ error: error.message });
-    }
-});
-
-app.post('/api/quiz/start', async (req, res) => {
-    try {
-        const { quizAddress, creatorAddress, pin, playerAddresses } = req.body;
-        const result = await quizService.startQuiz(quizAddress, creatorAddress, pin, playerAddresses);
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/quiz/end', async (req, res) => {
-    try {
-        const { quizAddress, creatorAddress, pin, playerScores } = req.body;
-        const result = await quizService.endQuiz(
-            quizAddress,
-            creatorAddress,
-            pin,
-            playerScores
-        );
-        res.json(result);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-});
