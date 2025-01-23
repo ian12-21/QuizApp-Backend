@@ -22,12 +22,17 @@ const quizService = new QuizService();
 // API endpoints
 app.post('/api/quiz/create', async (req, res) => {
     try {
-        const { pin, quizAddress, answersString, playerAddresses } = req.body;
+        const { pin, creatorAddress, quizAddress, quizName, answersHash,
+            playerAddresses, questions
+         } = req.body;
         const result = await quizService.createQuiz(
             pin,
+            creatorAddress,
             quizAddress,
-            answersString,
-            playerAddresses
+            quizName,
+            answersHash,
+            playerAddresses,
+            questions
         );
         res.json(result);
     } catch (error: unknown) {

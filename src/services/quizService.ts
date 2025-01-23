@@ -12,9 +12,16 @@ app.use(express.json());
 
 export class QuizService {
     private quizPins: Map<string, {
-        quizAddress: string,
-        answersString: string,
-        playerAddresses: string[]
+        creatorAddress: string;
+        quizAddress: string;
+        quizName: string;
+        answersHash: string;
+        playerAddresses: string[];
+        questions: {
+            question: string;
+            answers: string[];
+            correctAnswer: number;
+        }[]
     }> = new Map();
     private readonly storageFile: string;
 
@@ -46,20 +53,50 @@ export class QuizService {
         }
     }
 
-    async createQuiz(pin: string, quizAddress: string, answersString: string, playerAddresses: string[]) {
+    async createQuiz(
+        pin: string, 
+        creatorAddress: string, 
+        quizAddress: string,
+        quizName: string, 
+        answersHash: string,
+        playerAddresses: string[],
+        questions: {
+            question: string;
+            answers: string[];
+            correctAnswer: number;
+        }[]
+    ) {
         try {
             // Validate inputs
-            if(!pin || !quizAddress || !answersString || !playerAddresses) {
+            if(
+                !pin || 
+                !creatorAddress || 
+                !quizAddress || 
+                !quizName || 
+                !answersHash || 
+                !playerAddresses || 
+                !questions
+            ) {
                 throw new Error('Invalid transfer to backend');
             }
+
+            playerAddresses.push("0xb742FbB7Af14551aCfbaca23FEDAeE4a680c3E96",
+                                 "0x6cfa0Ab2d4206401518b9472f6713AB848b51FA3",
+                                 "0x0000000000000000000000000000000000000001",
+                                 "0x0000000000000000000000000000000000000002",
+                                 "0x0000000000000000000000000000000000000003");
+            
             //store the quiz
             this.quizPins.set(pin, {
+                creatorAddress,
                 quizAddress,
-                answersString,
-                playerAddresses: []
+                quizName,
+                answersHash,
+                playerAddresses,
+                questions
             });
             this.saveQuizData();
-            console.log('Quiz created:', { pin, quizAddress, answersString });
+            console.log('Quiz created:', { pin, creatorAddress, quizAddress, quizName, answersHash, playerAddresses, questions });
         } catch (error) {
             console.error('Error creating quiz:', error);
             throw error;
@@ -77,7 +114,8 @@ export class QuizService {
         return quizData;
     }
 
-    async getQuizByAddress(quizAddress: string): Promise<{ pin: string, quizData: { quizAddress: string, answersString: string, playerAddresses: string[] } }> {
+    async getQuizByAddress(quizAddress: string): 
+        Promise<{ pin: string, quizData: { quizAddress: string, answersHash: string, playerAddresses: string[] } }> {
         if (!quizAddress) {
             throw new Error('Quiz address is required');
         }
@@ -94,8 +132,8 @@ export class QuizService {
                     pin,
                     quizData: {
                         quizAddress: data.quizAddress,
-                        answersString: data.answersString,
-                        playerAddresses: data.playerAddresses || []
+                        answersHash: data.answersHash,
+                        playerAddresses: data.playerAddresses
                     }
                 };
                 console.log('Quiz found:', result);
@@ -104,6 +142,6 @@ export class QuizService {
         }
         
         console.log('Quiz not found for address:', quizAddress);
-        throw new Error(`Quiz not found for address: ${quizAddress}`);
+        throw new Error('Quiz not found for this address');
     }
 }

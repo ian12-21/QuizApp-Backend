@@ -9,51 +9,51 @@ describe('QuizService', () => {
 
     describe('createQuiz', () => {
         const mockPin = '123456';
+        const mockCreatorAddress = '0x1234567890';
         const mockQuizAddress = '0x9876543210987654321098765432109876543210';
-        const mockAnswersString = 'A,B,C,D';
+        const mockQuizName = 'Test Quiz';
+        const mockAnswersHash = 'hash123';
         const mockPlayerAddresses: string[] = [];
+        const mockQuestions = [
+            {
+                question: 'Test Question 1',
+                answers: ['A', 'B', 'C', 'D'],
+                correctAnswer: 0
+            }
+        ];
 
         it('should successfully create a quiz', async () => {
             await expect(quizService.createQuiz(
                 mockPin,
+                mockCreatorAddress,
                 mockQuizAddress,
-                mockAnswersString,
-                mockPlayerAddresses
+                mockQuizName,
+                mockAnswersHash,
+                mockPlayerAddresses,
+                mockQuestions
             )).resolves.not.toThrow();
 
             // Verify quiz was stored by trying to retrieve it
             const storedQuiz = await quizService.getQuizByPin(mockPin);
             expect(storedQuiz).toEqual({
+                creatorAddress: mockCreatorAddress,
                 quizAddress: mockQuizAddress,
-                answersString: mockAnswersString,
-                playerAddresses: []
+                quizName: mockQuizName,
+                answersHash: mockAnswersHash,
+                playerAddresses: ['0x100','0x200','0x300','0x400','0x500'],
+                questions: mockQuestions
             });
         });
 
-        it('should throw error when pin is missing', async () => {
+        it('should throw error when required fields are missing', async () => {
             await expect(quizService.createQuiz(
                 '',
+                mockCreatorAddress,
                 mockQuizAddress,
-                mockAnswersString,
-                mockPlayerAddresses
-            )).rejects.toThrow('Invalid transfer to backend');
-        });
-
-        it('should throw error when quiz address is missing', async () => {
-            await expect(quizService.createQuiz(
-                mockPin,
-                '',
-                mockAnswersString,
-                mockPlayerAddresses
-            )).rejects.toThrow('Invalid transfer to backend');
-        });
-
-        it('should throw error when answers string is missing', async () => {
-            await expect(quizService.createQuiz(
-                mockPin,
-                mockQuizAddress,
-                '',
-                mockPlayerAddresses
+                mockQuizName,
+                mockAnswersHash,
+                mockPlayerAddresses,
+                mockQuestions
             )).rejects.toThrow('Invalid transfer to backend');
         });
     });
@@ -61,18 +61,30 @@ describe('QuizService', () => {
     describe('getQuizByPin', () => {
         const mockPin = '123456';
         const mockQuizData = {
+            creatorAddress: '0x1234567890',
             quizAddress: '0x9876543210987654321098765432109876543210',
-            answersString: 'A,B,C,D',
-            playerAddresses: []
+            quizName: 'Test Quiz',
+            answersHash: 'hash123',
+            playerAddresses: ['0x100','0x200','0x300','0x400','0x500'],
+            questions: [
+                {
+                    question: 'Test Question 1',
+                    answers: ['A', 'B', 'C', 'D'],
+                    correctAnswer: 0
+                }
+            ]
         };
 
         it('should return quiz data for valid pin', async () => {
             // First create a quiz
             await quizService.createQuiz(
                 mockPin,
+                mockQuizData.creatorAddress,
                 mockQuizData.quizAddress,
-                mockQuizData.answersString,
-                mockQuizData.playerAddresses
+                mockQuizData.quizName,
+                mockQuizData.answersHash,
+                [],
+                mockQuizData.questions
             );
 
             // Then try to retrieve it
@@ -89,25 +101,41 @@ describe('QuizService', () => {
     describe('getQuizByAddress', () => {
         const mockPin = '123456';
         const mockQuizData = {
+            creatorAddress: '0x1234567890',
             quizAddress: '0x9876543210987654321098765432109876543210',
-            answersString: 'A,B,C,D',
-            playerAddresses: []
+            quizName: 'Test Quiz',
+            answersHash: 'hash123',
+            playerAddresses: ['0x100','0x200','0x300','0x400','0x500'],
+            questions: [
+                {
+                    question: 'Test Question 1',
+                    answers: ['A', 'B', 'C', 'D'],
+                    correctAnswer: 0
+                }
+            ]
         };
 
         it('should return quiz data and pin for valid address', async () => {
             // First create a quiz
             await quizService.createQuiz(
                 mockPin,
+                mockQuizData.creatorAddress,
                 mockQuizData.quizAddress,
-                mockQuizData.answersString,
-                mockQuizData.playerAddresses
+                mockQuizData.quizName,
+                mockQuizData.answersHash,
+                [],
+                mockQuizData.questions
             );
 
             // Then try to retrieve it by address
             const result = await quizService.getQuizByAddress(mockQuizData.quizAddress);
             expect(result).toEqual({
                 pin: mockPin,
-                quizData: mockQuizData
+                quizData: {
+                    quizAddress: mockQuizData.quizAddress,
+                    answersHash: mockQuizData.answersHash,
+                    playerAddresses: mockQuizData.playerAddresses
+                }
             });
         });
 
