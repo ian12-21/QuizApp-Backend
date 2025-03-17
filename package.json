@@ -10,7 +10,10 @@
     "serve": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "import-data": "ts-node src/scripts/importQuizData.ts",
+    "add-test-quiz": "ts-node src/scripts/addTestQuiz.ts",
+    "get-quiz": "ts-node src/scripts/getQuiz.ts"
   },
   "repository": {
     "type": "git",
@@ -22,7 +25,9 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "ethers": "^6.13.5",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "mongodb": "^6.3.0",
+    "mongoose": "^8.2.3"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",

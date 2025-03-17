@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
+import Quiz, { IQuiz } from '../models/Quiz';
 
 dotenv.config();
 
@@ -11,45 +12,78 @@ app.use(cors());
 app.use(express.json());
 
 export class QuizService {
-    private quizPins: Map<string, {
-        creatorAddress: string;
-        quizAddress: string;
-        quizName: string;
-        answersHash: string;
-        playerAddresses: string[];
-        questions: {
-            question: string;
-            answers: string[];
-            correctAnswer: number;
-        }[]
-    }> = new Map();
     private readonly storageFile: string;
 
     constructor() {
         this.storageFile = path.join(__dirname, '../../quiz-data.json');
-        this.loadQuizData();
+        //this.loadQuizData();
     }
 
-    private loadQuizData() {
+    private async loadQuizData() {
         try {
             if (fs.existsSync(this.storageFile)) {
                 const data = fs.readFileSync(this.storageFile, 'utf8');
                 const jsonData = JSON.parse(data);
-                this.quizPins = new Map(Object.entries(jsonData));
-                console.log('Loaded quiz data:', Array.from(this.quizPins.entries()));
+                
+                // Import data to MongoDB if needed
+                for (const [pin, quizData] of Object.entries(jsonData)) {
+                    // Check if quiz with this pin already exists in MongoDB
+                    const existingQuiz = await Quiz.findOne({ pin });
+                    if (!existingQuiz) {
+                        // Create new quiz in MongoDB with explicit typing
+                        const quizDataObj = quizData as {
+                            creatorAddress: string;
+                            quizAddress: string;
+                            quizName: string;
+                            answersHash: string;
+                            playerAddresses: string[];
+                            questions: {
+                                question: string;
+                                answers: string[];
+                                correctAnswer: number;
+                            }[];
+                        };
+
+                        await Quiz.create({
+                            pin,
+                            creatorAddress: quizDataObj.creatorAddress,
+                            quizAddress: quizDataObj.quizAddress,
+                            quizName: quizDataObj.quizName,
+                            answersHash: quizDataObj.answersHash,
+                            playerAddresses: quizDataObj.playerAddresses,
+                            questions: quizDataObj.questions,
+                            winner: ''
+                        });
+                        console.log(`Imported quiz with pin ${pin} to MongoDB`);
+                    }
+                }
+                console.log('Loaded quiz data to MongoDB');
             }
         } catch (error) {
             console.error('Error loading quiz data:', error);
         }
     }
 
-    private saveQuizData() {
+    private async saveQuizData() {
         try {
-            const jsonData = Object.fromEntries(this.quizPins);
+            // This method is kept for backward compatibility
+            // All data is now primarily saved to MongoDB
+            const quizzes = await Quiz.find({});
+            const jsonData = Object.fromEntries(
+                quizzes.map(quiz => [quiz.pin, {
+                    creatorAddress: quiz.creatorAddress,
+                    quizAddress: quiz.quizAddress,
+                    quizName: quiz.quizName,
+                    answersHash: quiz.answersHash,
+                    playerAddresses: quiz.playerAddresses,
+                    questions: quiz.questions,
+                    winner: quiz.winner
+                }])
+            );
             fs.writeFileSync(this.storageFile, JSON.stringify(jsonData, null, 2));
-            console.log('Saved quiz data');
+            console.log('Saved quiz data to file for backup');
         } catch (error) {
-            console.error('Error saving quiz data:', error);
+            console.error('Error saving quiz data to file:', error);
         }
     }
 
@@ -86,17 +120,25 @@ export class QuizService {
                                  "0x0000000000000000000000000000000000000002",
                                  "0x0000000000000000000000000000000000000003");
             
-            //store the quiz
-            this.quizPins.set(pin, {
+            // Store the quiz in MongoDB
+            const newQuiz = new Quiz({
+                pin,
                 creatorAddress,
                 quizAddress,
                 quizName,
                 answersHash,
                 playerAddresses,
-                questions
+                questions,
+                winner: ''
             });
+            
+            await newQuiz.save();
+            
+            // Also save to file for backward compatibility
             this.saveQuizData();
-            console.log('Quiz created:', { pin, creatorAddress, quizAddress, quizName, answersHash, playerAddresses, questions });
+            
+            console.log('Quiz created:', newQuiz);
+            return newQuiz;
         } catch (error) {
             console.error('Error creating quiz:', error);
             throw error;
@@ -105,43 +147,49 @@ export class QuizService {
 
     async getQuizByPin(pin: string) {
         console.log('Getting quiz by pin:', pin);
-        const quizData = this.quizPins.get(pin);
-        if (!quizData) {
+        
+        const quiz = await Quiz.findOne({ pin });
+        
+        if (!quiz) {
             console.log('Quiz not found for pin:', pin);
             throw new Error('Quiz not found');
         }
-        console.log('Quiz found:', quizData);
-        return quizData;
+        
+        console.log('Quiz found:', quiz);
+        return quiz;
     }
 
-    async getQuizByAddress(quizAddress: string): 
-        Promise<{ pin: string, quizData: { quizAddress: string, answersHash: string, playerAddresses: string[] } }> {
-        if (!quizAddress) {
-            throw new Error('Quiz address is required');
+    async endQuiz(pin: string, winnerAddress: string): Promise<{ success: boolean, message: string, quiz: IQuiz | null }> {
+        if (!pin) {
+            throw new Error('Quiz PIN is required');
         }
 
-        console.log('Getting quiz by address:', quizAddress);
-        console.log('Current quizPins:', Array.from(this.quizPins.entries()));
+        if (!winnerAddress) {
+            throw new Error('Winner address is required');
+        }
+
+        console.log('Ending quiz with pin:', pin, 'Winner:', winnerAddress);
         
-        for (const [pin, data] of this.quizPins.entries()) {
-            console.log('Checking quiz:', { pin, data });
-            // Case insensitive comparison
-            if (data.quizAddress && quizAddress && 
-                data.quizAddress.toLowerCase() === quizAddress.toLowerCase()) {
-                const result = {
-                    pin,
-                    quizData: {
-                        quizAddress: data.quizAddress,
-                        answersHash: data.answersHash,
-                        playerAddresses: data.playerAddresses
-                    }
-                };
-                console.log('Quiz found:', result);
-                return result;
-            }
+        // Find the quiz
+        const quiz = await Quiz.findOne({ pin });
+        
+        if (!quiz) {
+            console.log('Quiz not found for pin:', pin);
+            throw new Error('Quiz not found');
         }
         
-        console.log('Quiz not found for address:', quizAddress);
-        throw new Error('Quiz not found for this address');
+        // Update the winner
+        quiz.winner = winnerAddress;
+        await quiz.save();
+        
+        // Also update the JSON file for backward compatibility
+        await this.saveQuizData();
+        
+        console.log('Quiz ended successfully. Winner:', winnerAddress);
+        return { 
+            success: true, 
+            message: `Quiz with pin ${pin} ended successfully. Winner: ${winnerAddress}`,
+            quiz: quiz
+        };
     }
 }
