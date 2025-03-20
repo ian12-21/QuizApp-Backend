@@ -41,4 +41,5 @@ const QuizSchema = new Schema<IQuiz>({
 }, { timestamps: true });
 
 // Create and export the model
-export default mongoose.model<IQuiz>('Quiz', QuizSchema);
+// The third parameter specifies the exact collection name to use in MongoDB
+export default mongoose.model<IQuiz>('Quiz', QuizSchema, 'quiz_app');

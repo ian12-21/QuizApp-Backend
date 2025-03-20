@@ -12,82 +12,9 @@ app.use(cors());
 app.use(express.json());
 
 export class QuizService {
-    private readonly storageFile: string;
+    constructor() {}
 
-    constructor() {
-        this.storageFile = path.join(__dirname, '../../quiz-data.json');
-        //this.loadQuizData();
-    }
-
-    private async loadQuizData() {
-        try {
-            if (fs.existsSync(this.storageFile)) {
-                const data = fs.readFileSync(this.storageFile, 'utf8');
-                const jsonData = JSON.parse(data);
-                
-                // Import data to MongoDB if needed
-                for (const [pin, quizData] of Object.entries(jsonData)) {
-                    // Check if quiz with this pin already exists in MongoDB
-                    const existingQuiz = await Quiz.findOne({ pin });
-                    if (!existingQuiz) {
-                        // Create new quiz in MongoDB with explicit typing
-                        const quizDataObj = quizData as {
-                            creatorAddress: string;
-                            quizAddress: string;
-                            quizName: string;
-                            answersHash: string;
-                            playerAddresses: string[];
-                            questions: {
-                                question: string;
-                                answers: string[];
-                                correctAnswer: number;
-                            }[];
-                        };
-
-                        await Quiz.create({
-                            pin,
-                            creatorAddress: quizDataObj.creatorAddress,
-                            quizAddress: quizDataObj.quizAddress,
-                            quizName: quizDataObj.quizName,
-                            answersHash: quizDataObj.answersHash,
-                            playerAddresses: quizDataObj.playerAddresses,
-                            questions: quizDataObj.questions,
-                            winner: ''
-                        });
-                        console.log(`Imported quiz with pin ${pin} to MongoDB`);
-                    }
-                }
-                console.log('Loaded quiz data to MongoDB');
-            }
-        } catch (error) {
-            console.error('Error loading quiz data:', error);
-        }
-    }
-
-    private async saveQuizData() {
-        try {
-            // This method is kept for backward compatibility
-            // All data is now primarily saved to MongoDB
-            const quizzes = await Quiz.find({});
-            const jsonData = Object.fromEntries(
-                quizzes.map(quiz => [quiz.pin, {
-                    creatorAddress: quiz.creatorAddress,
-                    quizAddress: quiz.quizAddress,
-                    quizName: quiz.quizName,
-                    answersHash: quiz.answersHash,
-                    playerAddresses: quiz.playerAddresses,
-                    questions: quiz.questions,
-                    winner: quiz.winner
-                }])
-            );
-            fs.writeFileSync(this.storageFile, JSON.stringify(jsonData, null, 2));
-            console.log('Saved quiz data to file for backup');
-        } catch (error) {
-            console.error('Error saving quiz data to file:', error);
-        }
-    }
-
-    async createQuiz(
+ async createQuiz(
         pin: string, 
         creatorAddress: string, 
         quizAddress: string,
@@ -134,9 +61,6 @@ export class QuizService {
             
             await newQuiz.save();
             
-            // Also save to file for backward compatibility
-            this.saveQuizData();
-            
             console.log('Quiz created:', newQuiz);
             return newQuiz;
         } catch (error) {
@@ -181,9 +105,6 @@ export class QuizService {
         // Update the winner
         quiz.winner = winnerAddress;
         await quiz.save();
-        
-        // Also update the JSON file for backward compatibility
-        await this.saveQuizData();
         
         console.log('Quiz ended successfully. Winner:', winnerAddress);
         return { 

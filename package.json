@@ -10,10 +10,7 @@
     "serve": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage",
-    "import-data": "ts-node src/scripts/importQuizData.ts",
-    "add-test-quiz": "ts-node src/scripts/addTestQuiz.ts",
-    "get-quiz": "ts-node src/scripts/getQuiz.ts"
+    "test:coverage": "jest --coverage"
   },
   "repository": {
     "type": "git",

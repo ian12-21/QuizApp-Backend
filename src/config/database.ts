@@ -10,8 +10,14 @@ const MONGODB_URI = process.env.MONGODB_URI || "";
 // Connect to MongoDB
 export const connectToDatabase = async (): Promise<void> => {
   try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('Connected to MongoDB successfully');
+    // Ensure we're connecting to the 'quiz' database
+    // If MONGODB_URI already has a database specified, this will override it
+    const connectionOptions = {
+      dbName: 'quiz' // Explicitly set the database name to 'quiz'
+    };
+    
+    await mongoose.connect(MONGODB_URI, connectionOptions);
+    console.log('Connected to MongoDB quiz database successfully');
   } catch (error) {
     console.error('MongoDB connection error:', error);
     process.exit(1);
