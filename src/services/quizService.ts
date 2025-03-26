@@ -14,7 +14,7 @@ app.use(express.json());
 export class QuizService {
     constructor() {}
 
- async createQuiz(
+    async createQuiz(
         pin: string, 
         creatorAddress: string, 
         quizAddress: string,
@@ -41,11 +41,11 @@ export class QuizService {
                 throw new Error('Invalid transfer to backend');
             }
 
-            playerAddresses.push("0xb742FbB7Af14551aCfbaca23FEDAeE4a680c3E96",
-                                 "0x6cfa0Ab2d4206401518b9472f6713AB848b51FA3",
-                                 "0x0000000000000000000000000000000000000001",
-                                 "0x0000000000000000000000000000000000000002",
-                                 "0x0000000000000000000000000000000000000003");
+            // playerAddresses.push("0xb742FbB7Af14551aCfbaca23FEDAeE4a680c3E96",
+            //                      "0x6cfa0Ab2d4206401518b9472f6713AB848b51FA3",
+            //                      "0x0000000000000000000000000000000000000001",
+            //                      "0x0000000000000000000000000000000000000002",
+            //                      "0x0000000000000000000000000000000000000003");
             
             // Store the quiz in MongoDB
             const newQuiz = new Quiz({
