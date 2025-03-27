@@ -83,6 +83,37 @@ export class QuizService {
         return quiz;
     }
 
+    async addPlayers(pin: string, playerAddresses: string[]): Promise<{ success: boolean, message: string, quiz: IQuiz | null }> {
+        if (!pin) {
+            throw new Error('Quiz PIN is required');
+        }
+        
+        if (!playerAddresses || !Array.isArray(playerAddresses)) {
+            throw new Error('Player addresses are required');
+        }
+        
+        console.log('Adding players to quiz with pin:', pin, 'Players:', playerAddresses);
+        
+        // Find the quiz
+        const quiz = await Quiz.findOne({ pin });
+        
+        if (!quiz) {
+            console.log('Quiz not found for pin:', pin);
+            throw new Error('Quiz not found');
+        }
+        
+        // Update the player addresses
+        quiz.playerAddresses.push(...playerAddresses);
+        await quiz.save();
+        
+        console.log('Players added successfully:', playerAddresses);
+        return { 
+            success: true, 
+            message: `Players added successfully: ${playerAddresses.join(', ')}`,
+            quiz: quiz
+        };
+    }
+
     async endQuiz(pin: string, winnerAddress: string): Promise<{ success: boolean, message: string, quiz: IQuiz | null }> {
         if (!pin) {
             throw new Error('Quiz PIN is required');

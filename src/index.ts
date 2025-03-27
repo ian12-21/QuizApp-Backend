@@ -30,43 +30,90 @@ app.use(express.json());
 // Initialize quiz service
 const quizService = new QuizService();
 
+const quizRooms: {[key: string]: Set<string>} = {};
+
 // Socket.IO
 io.on('connection', (socket: Socket) => {
-    console.log('New user connected', socket.id, socket.handshake.query.address);
+    const address = socket.handshake.query.address as string;
+    console.log('New user connected', socket.id, 'Address:', address);
 
-    //quiz creation - create a room 
+    // Quiz creation - create a room 
     socket.on("quiz:create", ({pin, creatorAddress}) => {
-        socket.join(`quiz:${pin}`);
+        const room = `quiz:${pin}`;
+        socket.join(room);
+        
+        // Initialize room players if not exists
+        if (!quizRooms[room]) {
+            quizRooms[room] = new Set();
+        }
+
         console.log(`Quiz room created for pin: ${pin} by ${creatorAddress}`);
-        //emit confirmation event to client 
+        console.log(`Current players in room: ${Array.from(quizRooms[room])}`);
+        
+        // Emit updated player list
+        io.to(room).emit("quiz:players", Array.from(quizRooms[room]));
+        
+        // Emit confirmation event to client 
         socket.emit("quiz:created", {pin, creatorAddress});
     });
 
-    //join quiz queue
+    // Join quiz queue
     socket.on("quiz:join", async ({pin, playerAddress}) => {
-        //verify room exists before joining
         const room = `quiz:${pin}`;
-        const roomSockets = await io.in(room).fetchSockets();
-        //join the room
+        
+        // Ensure room exists in tracking
+        if (!quizRooms[room]) {
+            quizRooms[room] = new Set();
+        }
+        
+        // Add player to room
+        quizRooms[room].add(playerAddress);
         socket.join(room);
+        
         console.log(`User ${playerAddress} joined quiz: ${pin}`);
-        //broadcast to all users in the room that a new player joined
-        io.to(room).emit("quiz:player:joined", {
-            playerAddress,
-            players: roomSockets.map(s => s.handshake.query.address)
+        console.log(`Current players in room: ${Array.from(quizRooms[room])}`);
+        
+        // Broadcast updated player list to all room members
+        io.to(room).emit("quiz:players", Array.from(quizRooms[room]));
+    });
+
+    // Handle disconnection
+    socket.on("disconnect", () => {
+        console.log("User disconnected", address);
+
+        // Remove player from all quiz rooms
+        Object.keys(quizRooms).forEach(room => {
+            const roomPlayers = quizRooms[room];
+            const playerToRemove = Array.from(roomPlayers).find(
+                player => player === address
+            );
+            
+            if (playerToRemove) {
+                roomPlayers.delete(playerToRemove);
+                
+                console.log(`Removing player ${playerToRemove} from room ${room}`);
+                console.log(`Remaining players: ${Array.from(roomPlayers)}`);
+                
+                // Broadcast updated player list
+                io.to(room).emit("quiz:players", Array.from(roomPlayers));
+            }
         });
     });
 
-    //start quiz event - redirect all players to live quiz comp
+    // Start quiz event - redirect all players to live quiz component
     socket.on("quiz:start", ({pin}) => {
         io.to(`quiz:${pin}`).emit("quiz:started", {
             redirectUrl: `/active-quiz/${pin}`
         });
         console.log(`Quiz started for pin: ${pin}`);
     });
-
-    socket.on("disconnect", () => {
-        console.log("User disconnected");
+    
+    // End quiz event - redirect all players to leaderboard
+    socket.on("quiz:end", ({quizAddress, pin}) => {
+        io.to(`quiz:${pin}`).emit("quiz:ended", {
+            redirectUrl: `/leaderboard/${quizAddress}/${pin}`
+        });
+        console.log(`Quiz ended for pin: ${pin}`);
     });
 });
 
@@ -98,6 +145,25 @@ app.post('/api/quiz/create', async (req, res) => {
 app.get('/api/quiz/:pin', async (req, res) => {
     try {
         const result = await quizService.getQuizByPin(req.params.pin);
+        res.json(result);
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            res.status(404).json({ error: error.message });
+        } else {
+            res.status(404).json({ error: 'An unknown error occurred' });
+        }
+    }
+});
+
+//add players to the quiz instance in the database
+app.post('/api/quiz/:pin/add-players', async (req, res) => {
+    try {
+        const { playerAddresses } = req.body;
+        if (!playerAddresses) {
+            return res.status(400).json({ error: 'Player addresses are required' });
+        }
+        
+        const result = await quizService.addPlayers(req.params.pin, playerAddresses);
         res.json(result);
     } catch (error: unknown) {
         if (error instanceof Error) {
