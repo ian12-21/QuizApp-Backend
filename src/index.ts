@@ -120,7 +120,7 @@ io.on('connection', (socket: Socket) => {
 // API endpoints
 app.post('/api/quiz/create', async (req, res) => {
     try {
-        const { pin, creatorAddress, quizAddress, quizName, answersHash,
+        const { pin, creatorAddress, quizAddress, quizName, answersString,
             playerAddresses, questions
          } = req.body;
         const result = await quizService.createQuiz(
@@ -128,7 +128,7 @@ app.post('/api/quiz/create', async (req, res) => {
             creatorAddress,
             quizAddress,
             quizName,
-            answersHash,
+            answersString,
             playerAddresses,
             questions
         );
@@ -174,15 +174,45 @@ app.post('/api/quiz/:pin/add-players', async (req, res) => {
     }
 });
 
-// End quiz and set winner
-app.post('/api/quiz/:pin/end', async (req, res) => {
+//stores the answer for a question for each player
+app.post('/api/quiz/:quizAddress/submit-answers', async (req, res) => {
     try {
-        const { winnerAddress } = req.body;
-        if (!winnerAddress) {
-            return res.status(400).json({ error: 'Winner address is required' });
+        const { userAnswer } = req.body;
+        if (!userAnswer) {
+            return res.status(400).json({ error: 'User answer is required' });
         }
         
-        const result = await quizService.endQuiz(req.params.pin, winnerAddress);
+        const result = await quizService.submitAnswer(userAnswer);
+        res.json(result);
+    }catch (error: unknown) {
+        if (error instanceof Error) {
+            res.status(500).json({ error: error.message });
+        } else {
+            res.status(500).json({ error: 'An unknown error occurred' });
+        }
+    }    
+});
+
+//function for submiting all users every answer to backend & contract
+app.post('/api/quiz/:quizAddress/submit-all-answers', async (req, res) => {
+    try {
+        const { quizAddress } = req.params;
+        const result = await quizService.submitAllAnswers(quizAddress);
+        res.json(result);
+    }catch (error: unknown) {
+        if (error instanceof Error) {
+            res.status(500).json({ error: error.message });
+        } else {
+            res.status(500).json({ error: 'An unknown error occurred' });
+        }
+    }    
+});
+
+// End quiz and set winner
+app.post('/api/quiz/:quizAddress/end', async (req, res) => {
+    try {
+        const { quizAddress } = req.params;
+        const result = await quizService.determineQuizWinner(quizAddress);
         res.json(result);
     } catch (error: unknown) {
         if (error instanceof Error) {
