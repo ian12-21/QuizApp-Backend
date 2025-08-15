@@ -16,7 +16,7 @@ export interface IQuiz extends Document {
   answersHash: string;
   playerAddresses: string[];
   questions: IQuestion[];
-  winner: string;
+  winner: { userAddress: string, score: number };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,7 +37,7 @@ const QuizSchema = new Schema<IQuiz>({
   answersHash: { type: String, required: true },
   playerAddresses: { type: [String], required: true },
   questions: { type: [QuestionSchema], required: true },
-  winner: { type: String, default: '' }
+  winner: { type: { userAddress: String, score: Number }, default: { userAddress: '', score: 0 } }
 }, { timestamps: true });
 
 // Create and export the model
