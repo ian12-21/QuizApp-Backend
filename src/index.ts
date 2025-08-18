@@ -32,7 +32,7 @@ const quizService = new QuizService();
 
 const quizRooms: {[key: string]: Set<string>} = {};
 
-// Socket.IO
+// Socket.IO connection handler (add this to your index.ts)
 io.on('connection', (socket: Socket) => {
     const address = socket.handshake.query.address as string;
     console.log('New user connected', socket.id, 'Address:', address);
@@ -47,13 +47,16 @@ io.on('connection', (socket: Socket) => {
             quizRooms[room] = new Set();
         }
 
+        // Add creator to the room
+        quizRooms[room].add(creatorAddress);
+
         console.log(`Quiz room created for pin: ${pin} by ${creatorAddress}`);
         console.log(`Current players in room: ${Array.from(quizRooms[room])}`);
         
-        // Emit updated player list
+        // Emit updated player list to all room members
         io.to(room).emit("quiz:players", Array.from(quizRooms[room]));
         
-        // Emit confirmation event to client 
+        // Emit confirmation event to creator 
         socket.emit("quiz:created", {pin, creatorAddress});
     });
 
@@ -61,20 +64,58 @@ io.on('connection', (socket: Socket) => {
     socket.on("quiz:join", async ({pin, playerAddress}) => {
         const room = `quiz:${pin}`;
         
-        // Ensure room exists in tracking
+        // Check if quiz room exists
         if (!quizRooms[room]) {
+            console.log(`Quiz room ${room} doesn't exist. Creating it.`);
             quizRooms[room] = new Set();
         }
         
-        // Add player to room
-        quizRooms[room].add(playerAddress);
-        socket.join(room);
+        // Check if player is already in the room
+        if (quizRooms[room].has(playerAddress)) {
+            console.log(`Player ${playerAddress} is already in room ${room}.`);
+        }else{
+            quizRooms[room].add(playerAddress);
+            socket.join(room);
+        }
         
         console.log(`User ${playerAddress} joined quiz: ${pin}`);
         console.log(`Current players in room: ${Array.from(quizRooms[room])}`);
         
         // Broadcast updated player list to all room members
         io.to(room).emit("quiz:players", Array.from(quizRooms[room]));
+        
+        // Confirm join to the player
+        socket.emit("quiz:joined", {pin, playerAddress});
+    });
+
+    // Start quiz event - redirect all players to live quiz component
+    socket.on("quiz:start", ({pin}) => {
+        const room = `quiz:${pin}`;
+        console.log(`Starting quiz for pin: ${pin}`);
+        console.log(`Players in room ${room}:`, Array.from(quizRooms[room] || []));
+        
+        // Emit to all players in the room
+        io.to(room).emit("quiz:started", {
+            redirectUrl: `/active-quiz/${pin}`
+        });
+        console.log(`Quiz started event sent to room: ${room}`);
+    });
+    
+    // End quiz event - redirect all players to leaderboard
+    socket.on("quiz:end", ({quizAddress, pin}) => {
+        const room = `quiz:${pin}`;
+        console.log(`Ending quiz for pin: ${pin}`);
+        
+        io.to(room).emit("quiz:ended", {
+            redirectUrl: `/leaderboard/${quizAddress}/${pin}`
+        });
+        console.log(`Quiz ended for pin: ${pin}`);
+        
+        // Clean up the room
+        if (quizRooms[room]) {
+            delete quizRooms[room];
+            console.log(`Cleaned up room: ${room}`);
+        }
     });
 
     // Handle disconnection
@@ -84,38 +125,25 @@ io.on('connection', (socket: Socket) => {
         // Remove player from all quiz rooms
         Object.keys(quizRooms).forEach(room => {
             const roomPlayers = quizRooms[room];
-            const playerToRemove = Array.from(roomPlayers).find(
-                player => player === address
-            );
-            
-            if (playerToRemove) {
-                roomPlayers.delete(playerToRemove);
+            if (roomPlayers.has(address)) {
+                roomPlayers.delete(address);
                 
-                console.log(`Removing player ${playerToRemove} from room ${room}`);
+                console.log(`Removing player ${address} from room ${room}`);
                 console.log(`Remaining players: ${Array.from(roomPlayers)}`);
                 
                 // Broadcast updated player list
                 io.to(room).emit("quiz:players", Array.from(roomPlayers));
+                
+                // If room is empty, clean it up
+                if (roomPlayers.size === 0) {
+                    delete quizRooms[room];
+                    console.log(`Cleaned up empty room: ${room}`);
+                }
             }
         });
     });
-
-    // Start quiz event - redirect all players to live quiz component
-    socket.on("quiz:start", ({pin}) => {
-        io.to(`quiz:${pin}`).emit("quiz:started", {
-            redirectUrl: `/active-quiz/${pin}`
-        });
-        console.log(`Quiz started for pin: ${pin}`);
-    });
-    
-    // End quiz event - redirect all players to leaderboard
-    socket.on("quiz:end", ({quizAddress, pin}) => {
-        io.to(`quiz:${pin}`).emit("quiz:ended", {
-            redirectUrl: `/leaderboard/${quizAddress}/${pin}`
-        });
-        console.log(`Quiz ended for pin: ${pin}`);
-    });
 });
+
 
 // API endpoints
 app.post('/api/quiz/create', async (req, res) => {
@@ -194,7 +222,7 @@ app.post('/api/quiz/:quizAddress/submit-answers', async (req, res) => {
 });
 
 //function for submiting all users every answer to backend & contract
-app.post('/api/quiz/:quizAddress/submit-all-answers', async (req, res) => {
+app.get('/api/quiz/:quizAddress/submit-all-answers', async (req, res) => {
     try {
         const { quizAddress } = req.params;
         const result = await quizService.submitAllAnswers(quizAddress);
@@ -209,7 +237,7 @@ app.post('/api/quiz/:quizAddress/submit-all-answers', async (req, res) => {
 });
 
 // End quiz and set winner
-app.post('/api/quiz/:quizAddress/end', async (req, res) => {
+app.get('/api/quiz/:quizAddress/end', async (req, res) => {
     try {
         const { quizAddress } = req.params;
         const result = await quizService.determineQuizWinner(quizAddress);

@@ -9,7 +9,7 @@ import { ethers } from 'ethers';
 // Define interface for user answer submission
 interface IUserAnswer {
   quizAddress: string;
-  userAddress: string;
+  userAddress: string | null;
   questionIndex: number;
   answer: number;
 }
@@ -104,7 +104,7 @@ export class QuizService {
             
             await quizAnswers.save();
             
-            console.log('Quiz created:', newQuiz);
+            // console.log('Quiz created:', newQuiz);
             return newQuiz;
         } catch (error) {
             console.error('Error creating quiz:', error);
@@ -113,7 +113,7 @@ export class QuizService {
     }
 
     async getQuizByPin(pin: string) {
-        console.log('Getting quiz by pin:', pin);
+        // console.log('Getting quiz by pin:', pin);
         
         const quiz = await Quiz.findOne({ pin });
         
@@ -122,7 +122,7 @@ export class QuizService {
             throw new Error('Quiz not found');
         }
         
-        console.log('Quiz found:', quiz);
+        // console.log('Quiz found:', quiz);
         return quiz;
     }
 
@@ -135,7 +135,7 @@ export class QuizService {
             throw new Error('Player addresses are required');
         }
         
-        console.log('Adding players to quiz with pin:', pin, 'Players:', playerAddresses);
+        // console.log('Adding players to quiz with pin:', pin, 'Players:', playerAddresses);
         
         // Find the quiz
         const quiz = await Quiz.findOne({ pin });
@@ -149,7 +149,7 @@ export class QuizService {
         quiz.playerAddresses.push(...playerAddresses);
         await quiz.save();
         
-        console.log('Players added successfully:', playerAddresses);
+        // console.log('Players added successfully:', playerAddresses);
         return { 
             success: true, 
             message: `Players added successfully: ${playerAddresses.join(', ')}`,

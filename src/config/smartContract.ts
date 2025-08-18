@@ -39,7 +39,6 @@ export const getProvider = () => {
 export const getSigner = () => {
   const provider = getProvider();
   const privateKey = process.env.PRIVATE_KEY;
-  
   if (!privateKey) {
     throw new Error('PRIVATE_KEY environment variable is required');
   }
