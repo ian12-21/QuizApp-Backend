@@ -1,16 +1,24 @@
-# QuizApp-Backend: Architecture & Workflow Overview
+# QuizApp-Backend: Project Overview, Architecture & Workflow
 
-This document explains the core workflow, main features, and architecture of the **QuizApp-Backend** project, which powers the backend for a decentralized quiz application. It also visualizes the major flows and data relationships.
+## About the Project
+
+**QuizApp-Backend** is the backend service powering the QuizApp decentralized quiz platform. Built with Node.js and TypeScript, it manages quiz creation, player participation, answer collection, and seamless integration with Ethereum smart contracts. The backend ensures secure storage, reliable quiz flow, and transparent, on-chain anchoring of results.
+
+**Key Objectives:**
+- Provide API endpoints to handle quiz lifecycle: creation, participation, answer submission, and contract interaction.
+- Persist quiz and answer data securely in MongoDB.
+- Serve as a bridge between the frontend app and Ethereum blockchain for trustless quiz results.
+- Enable secure winner determination and transparent game logic.
 
 ---
 
 ## Core Features
 
-- **Quiz Management**: Create quizzes, store questions, and manage players.
-- **Answer Submission**: Collect and store answers from players in MongoDB.
-- **Smart Contract Integration**: Submit all answers and scores to an on-chain smart contract for transparency and trust.
-- **Winner Determination**: Calculate and persist the winner for each quiz.
-- **REST API**: Exposes endpoints for quiz creation, participation, answer submission, and contract interaction.
+- **Quiz Management:** Create quizzes, store questions, and manage players.
+- **Answer Submission:** Collect and store answers from players in MongoDB.
+- **Smart Contract Integration:** Submit all answers and scores to an on-chain smart contract for transparency and trust.
+- **Winner Determination:** Calculate and persist the winner for each quiz.
+- **REST API:** Exposes endpoints for quiz creation, participation, answer submission, and contract interaction.
 
 ---
 
@@ -130,7 +138,7 @@ flowchart LR
 
 ## Security & Decentralization Note
 
-- For security, transaction data for smart contract calls can be **prepared by the backend** but **signed in the frontend** with the user's wallet. This pattern ensures users control their funds and signatures.
+- For security, transaction data for smart contract calls can be **prepared by the backend** but **signed in the frontend** with the user's wallet. This pattern ensures users control their funds and signatures, with the backend acting as a coordinator for quiz logic and data.
 
 ---
 
