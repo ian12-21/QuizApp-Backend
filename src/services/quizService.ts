@@ -332,4 +332,132 @@ export class QuizService {
                 
         return this.winner;
     }
+
+
+
+/*
+  // Add this method to your QuizService class in quizService.ts
+
+  async prepareSubmitAllAnswers(quizAddress: string): Promise<{
+      success: boolean;
+      transactionData?: {
+          to: string;
+          data: string;
+          players: string[];
+          answersArray: string[];
+          scoresArray: number[];
+          winner: { userAddress: string, score: number };
+      };
+      error?: string;
+  }> {
+      try {
+          // Get the quiz data
+          const quiz = await Quiz.findOne({ quizAddress });
+          if (!quiz) {
+              return { success: false, error: 'Quiz not found' };
+          }
+  
+          // Get all answers for this quiz
+          const answersDoc = await UserAnswers.findOne({ quizAddress });
+          if (!answersDoc) {
+              return { success: false, error: 'No answers found for this quiz' };
+          }
+  
+          const players: string[] = [];
+          const answersArray: string[] = [];
+          const scoresArray: number[] = [];
+  
+          // Process each player in the quiz
+          for (const playerAddress of quiz.playerAddresses) {
+              players.push(playerAddress);
+  
+              // Find this player's answers
+              const participant = answersDoc.participants.find(p => p.userAddress === playerAddress);
+              
+              // Build answers string for this player
+              let playerAnswersString = '';
+              for (let questionIndex = 0; questionIndex < quiz.questions.length; questionIndex++) {
+                  if (participant) {
+                      const answer = participant.answers.find(a => a.questionIndex === questionIndex);
+                      if (answer) {
+                          playerAnswersString += answer.selectedOption.toString();
+                      } else {
+                          playerAnswersString += '-1'; // Missing answer
+                      }
+                  } else {
+                      playerAnswersString += '-1'; // Player didn't submit any answers
+                  }
+              }
+              
+              answersArray.push(playerAnswersString);
+  
+              // Calculate score for this player
+              let score = 0;
+              if (participant) {
+                  participant.answers.forEach(answer => {
+                      const question = quiz.questions[answer.questionIndex];
+                      if (question && question.correctAnswer === answer.selectedOption) {
+                          score++;
+                      }
+                  });
+              }
+              
+              scoresArray.push(score);
+          }
+  
+          // Determine the winner
+          let highestScore = 0;
+          let winner = { userAddress: '', score: 0 };
+          
+          for (let i = 0; i < players.length; i++) {
+              if (scoresArray[i] > highestScore) {
+                  highestScore = scoresArray[i];
+                  winner.userAddress = players[i];
+                  winner.score = scoresArray[i];
+              }
+          }
+  
+          // Update the quiz with the winner information
+          this.winner = winner;
+          quiz.winner = winner;
+          await quiz.save();
+  
+          // Get the smart contract instance to encode the function call
+          const contract = getQuizContract(quizAddress);
+          
+          // Encode the function call data
+          const functionData = contract.interface.encodeFunctionData('submitAllAnswers', [
+              players,
+              answersArray,
+              scoresArray
+          ]);
+  
+          console.log('Transaction data prepared for frontend signing:', {
+              players,
+              answersArray,
+              scoresArray,
+              winner
+          });
+  
+          return {
+              success: true,
+              transactionData: {
+                  to: quizAddress,
+                  data: functionData,
+                  players,
+                  answersArray,
+                  scoresArray,
+                  winner
+              }
+          };
+  
+      } catch (error) {
+          console.error('Error preparing submit all answers transaction:', error);
+          return { 
+              success: false, 
+              error: error instanceof Error ? error.message : 'Unknown error occurred' 
+          };
+      }
+  }
+*/
 }
