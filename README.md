@@ -73,16 +73,20 @@ The quiz data is stored in MongoDB with the following structure:
 ## BACK frONT contract interaciton
 
 is it possible in backend nodejs project to initiate a smart contract function but sign it in the fronetendEditYes, this is absolutely possible and actually a common pattern for better security and user experience. Here are the main approaches:
+
 Method 1: Transaction Building + Frontend Signing
+
 Backend:
 javascript// Build unsigned transaction
+```
 const contract = new ethers.Contract(address, abi, provider);
 const unsignedTx = await contract.populateTransaction.yourFunction(params);
-
+```
 // Send to frontend
 res.json({ unsignedTransaction: unsignedTx });
 Frontend:
 javascript// Sign and send
+```
 const signer = provider.getSigner();
 const signedTx = await signer.sendTransaction(unsignedTransaction);
-
+```
