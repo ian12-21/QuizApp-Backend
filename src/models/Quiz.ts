@@ -13,7 +13,7 @@ export interface IQuiz extends Document {
   creatorAddress: string;
   quizAddress: string;
   quizName: string;
-  answersHash: string;
+  answersString: string;
   playerAddresses: string[];
   questions: IQuestion[];
   winner: { userAddress: string, score: number };
@@ -34,7 +34,7 @@ const QuizSchema = new Schema<IQuiz>({
   creatorAddress: { type: String, required: true },
   quizAddress: { type: String, required: true },
   quizName: { type: String, required: true },
-  answersHash: { type: String, required: true },
+  answersString: { type: String, required: true },
   playerAddresses: { type: [String], required: true },
   questions: { type: [QuestionSchema], required: true },
   winner: { type: { userAddress: String, score: Number }, default: { userAddress: '', score: 0 } }

@@ -55,7 +55,8 @@ export class QuizService {
 
             //dummy player addresses
             playerAddresses.push("0xb742FbB7Af14551aCfbaca23FEDAeE4a680c3E96",
-                                "0x6cfa0Ab2d4206401518b9472f6713AB848b51FA3");
+                                "0x6cfa0Ab2d4206401518b9472f6713AB848b51FA3",
+                                "0x9234567890123456789012345678901234567890");
             
             // Store the quiz in MongoDB
             const newQuiz = new Quiz({
@@ -66,15 +67,39 @@ export class QuizService {
                 answersString,
                 playerAddresses,
                 questions,
-                winner: ''
+                winner: { userAddress: '', score: 0 }
             });
             
             await newQuiz.save();
             
-            // Initialize empty answers document for this quiz
+            // Initialize answers document with dummy data for testing
+            const dummyParticipants = [
+                {
+                    userAddress: "0xb742FbB7Af14551aCfbaca23FEDAeE4a680c3E96",
+                    answers: [
+                        { questionIndex: 0, selectedOption: 1 }, // Answer for question 0
+                        { questionIndex: 1, selectedOption: 2 }  // Answer for question 1
+                    ]
+                },
+                {
+                    userAddress: "0x6cfa0Ab2d4206401518b9472f6713AB848b51FA3",
+                    answers: [
+                        { questionIndex: 0, selectedOption: 0 }, // Answer for question 0
+                        { questionIndex: 1, selectedOption: 1 }  // Answer for question 1
+                    ]
+                },
+                {
+                    userAddress: "0x9234567890123456789012345678901234567890",
+                    answers: [
+                        { questionIndex: 0, selectedOption: 3 }, // Answer for question 0
+                        { questionIndex: 1, selectedOption: 0 }  // Answer for question 1
+                    ]
+                }
+            ];
+
             const quizAnswers = new UserAnswers({
                 quizAddress,
-                participants: []
+                participants: dummyParticipants
             });
             
             await quizAnswers.save();
