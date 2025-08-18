@@ -1,5 +1,6 @@
+```mermaid
 graph TD
-    I[Admin/Client] -- trigger --> J[API: /api/quiz/:quizAddress/submit-all-answers]
-    J -- fetch answers, scores --> K[QuizService]
-    K -- call contract --> L[Ethereum Smart Contract: submitAllAnswers]
-    K -- set winner --> C
+    A[Client] -- create quiz --> B[API: /api/quiz/create]
+    B -- store quiz --> C[MongoDB: Quiz Collection]
+    B -- initialize answers --> D[MongoDB: UserAnswers Collection]
+```
