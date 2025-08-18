@@ -70,7 +70,7 @@ The quiz data is stored in MongoDB with the following structure:
 
 
 
-##BACK frONT contract interaciton
+## BACK frONT contract interaciton
 
 is it possible in backend nodejs project to initiate a smart contract function but sign it in the fronetendEditYes, this is absolutely possible and actually a common pattern for better security and user experience. Here are the main approaches:
 Method 1: Transaction Building + Frontend Signing
