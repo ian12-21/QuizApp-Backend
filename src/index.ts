@@ -223,6 +223,40 @@ app.post('/api/quiz/:quizAddress/end', async (req, res) => {
     }
 });
 
+/*
+    // Replace your existing submit-all-answers endpoint in index.ts with this:
+
+    //function for preparing transaction data for frontend signing
+    app.get('/api/quiz/:quizAddress/prepare-submit-answers', async (req, res) => {
+        try {
+            const { quizAddress } = req.params;
+            const result = await quizService.prepareSubmitAllAnswers(quizAddress);
+            res.json(result);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                res.status(500).json({ error: error.message });
+            } else {
+                res.status(500).json({ error: 'An unknown error occurred' });
+            }
+        }
+    });
+    
+    // Optional: Keep the old endpoint for backward compatibility or remove if not needed
+    app.post('/api/quiz/:quizAddress/submit-all-answers', async (req, res) => {
+        try {
+            const { quizAddress } = req.params;
+            const result = await quizService.submitAllAnswers(quizAddress);
+            res.json(result);
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                res.status(500).json({ error: error.message });
+            } else {
+                res.status(500).json({ error: 'An unknown error occurred' });
+            }
+        }
+    });
+*/
+
 const PORT = 3000;
 
 // Connect to MongoDB and start the server
