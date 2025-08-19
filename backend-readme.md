@@ -73,7 +73,7 @@ The main quiz document in MongoDB:
   creatorAddress: string;
   quizAddress: string;
   quizName: string;
-  answersHash: string;
+  answersString: string;
   playerAddresses: string[];
   questions: [
     {
