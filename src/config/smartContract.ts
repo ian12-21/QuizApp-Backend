@@ -30,24 +30,19 @@ export const QUIZ_CONTRACT_ABI = [
   }
 ];
 
-// Get provider and signer for blockchain interactions
+// Get provider for read-only operations
 export const getProvider = () => {
   const rpcUrl = process.env.RPC_URL || 'http://localhost:8545';
   return new ethers.JsonRpcProvider(rpcUrl);
 };
 
-export const getSigner = () => {
-  const provider = getProvider();
-  const privateKey = process.env.PRIVATE_KEY;
-  if (!privateKey) {
-    throw new Error('PRIVATE_KEY environment variable is required');
-  }
-  
-  return new ethers.Wallet(privateKey, provider);
+// Get contract interface for encoding function calls (no signer needed)
+export const getQuizContractInterface = () => {
+  return new ethers.Interface(QUIZ_CONTRACT_ABI);
 };
 
-// Get contract instance
-export const getQuizContract = (contractAddress: string) => {
-  const signer = getSigner();
-  return new ethers.Contract(contractAddress, QUIZ_CONTRACT_ABI, signer);
+// Get contract instance for read-only operations (no signer)
+export const getQuizContractReadOnly = (contractAddress: string) => {
+  const provider = getProvider();
+  return new ethers.Contract(contractAddress, QUIZ_CONTRACT_ABI, provider);
 };

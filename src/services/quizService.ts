@@ -3,7 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import Quiz, { IQuiz } from '../models/Quiz';
 import UserAnswers, { IQuizAnswers } from '../models/UserAnswers';
-import { getQuizContract } from '../config/smartContract';
+import { getQuizContractInterface } from '../config/smartContract';
 import { ethers } from 'ethers';
 
 // Define interface for user answer submission
@@ -23,7 +23,7 @@ app.use(express.json());
 export class QuizService {
     constructor() {}
 
-    winner: { userAddress: string, score: number } = { userAddress: '', score: 0 };
+    // winner: { userAddress: string, score: number } = { userAddress: '', score: 0 };
 
     //this function is used to create a new quiz
     async createQuiz(
@@ -84,7 +84,7 @@ export class QuizService {
                 {
                     userAddress: "0x6cfa0Ab2d4206401518b9472f6713AB848b51FA3",
                     answers: [
-                        { questionIndex: 0, selectedOption: 0 }, // Answer for question 0
+                        { questionIndex: 0, selectedOption: 1 }, // Answer for question 0
                         { questionIndex: 1, selectedOption: 1 }  // Answer for question 1
                     ]
                 },
@@ -144,9 +144,14 @@ export class QuizService {
             console.log('Quiz not found for pin:', pin);
             throw new Error('Quiz not found');
         }
+
+        //remove creator address from player addresses
+        playerAddresses = playerAddresses.filter(address => address !== quiz.creatorAddress);
+        // console.log('Player addresses after removing creator:', playerAddresses);
         
         // Update the player addresses
         quiz.playerAddresses.push(...playerAddresses);
+        // console.log('Player addresses after adding players:', quiz.playerAddresses);
         await quiz.save();
         
         // console.log('Players added successfully:', playerAddresses);
@@ -163,7 +168,7 @@ export class QuizService {
         if (userAnswer.questionIndex === undefined || userAnswer.questionIndex < 0) throw new Error('Question index is required and must be a non-negative number');
         if (userAnswer.answer === undefined) throw new Error('Answer is required');
         
-        console.log('Submitting answer:', userAnswer);
+        // console.log('Submitting answer:', userAnswer);
     
         try {
             // Get quiz to verify the question index
@@ -194,7 +199,8 @@ export class QuizService {
                     answers: [{
                         questionIndex: userAnswer.questionIndex,
                         selectedOption: userAnswer.answer
-                    }]
+                    }],
+                    score: 0
                 });
             } else {
                 // Check if this question has already been answered
@@ -223,7 +229,7 @@ export class QuizService {
                 await quiz.save();
             }
             
-            console.log('Answer submitted successfully');
+            // console.log('Answer submitted successfully');
             return { 
                 success: true, 
                 message: `Answer submitted successfully for question ${userAnswer.questionIndex}`
@@ -234,44 +240,141 @@ export class QuizService {
         }
     }
 
+    // async submitAllAnswers(quizAddress: string): Promise<{ success: boolean }> {
+    //     try {
+    //         // Get the quiz data
+    //         const quiz = await Quiz.findOne({ quizAddress });
+    //         if (!quiz) {
+    //             throw new Error('Quiz not found');
+    //         }
 
-// --------------------------------------------------------------------------------------------------------------------------
+    //         // Get all answers for this quiz
+    //         const answersDoc = await UserAnswers.findOne({ quizAddress });
+    //         if (!answersDoc) {
+    //             throw new Error('No answers found for this quiz');
+    //         }
 
-    //this function is used to store all players, their answers and scores inside a smart contract
-    //this is how smart contract function looks like:
-    /*function submitAllAnswers(
-        address[] calldata players,
-        uint128[] calldata answers,
-        uint128[] calldata scores
-    ) external {}
-    */
-   //player is an array of all players
-   //answers is an array of all answers, so each field of the array is a combined string of answers from each user
-   //scores is an array of all scores, so each field of the array is a score from each user
-   //so before contract is called all scores need to be calculated and answers for each user need to be combined into one string
-   //also there is a posibility that user didnt submit the answer for an question so in that case we need to add -1 to the answers array
-    async submitAllAnswers(quizAddress: string): Promise<{ success: boolean }> {
+    //         const players: string[] = [];
+    //         const answersArray: string[] = [];
+    //         const scoresArray: number[] = [];
+
+    //         // Process each player in the quiz
+    //         for (const playerAddress of quiz.playerAddresses) {
+    //             players.push(playerAddress);
+
+    //             // Find this player's answers
+    //             const participant = answersDoc.participants.find(p => p.userAddress === playerAddress);
+                
+    //             // Build answers string for this player
+    //             let playerAnswersString = '';
+    //             for (let questionIndex = 0; questionIndex < quiz.questions.length; questionIndex++) {
+    //                 if (participant) {
+    //                     const answer = participant.answers.find(a => a.questionIndex === questionIndex);
+    //                     if (answer) {
+    //                         playerAnswersString += answer.selectedOption.toString();
+    //                     } else {
+    //                         playerAnswersString += '-1'; // Missing answer
+    //                     }
+    //                 } else {
+    //                     playerAnswersString += '-1'; // Player didn't submit any answers
+    //                 }
+    //             }
+                
+    //             answersArray.push(playerAnswersString);
+
+    //             // Calculate score for this player
+    //             let score = 0;
+    //             if (participant) {
+    //                 participant.answers.forEach(answer => {
+    //                     const question = quiz.questions[answer.questionIndex];
+    //                     if (question && question.correctAnswer === answer.selectedOption) {
+    //                         score++;
+    //                     }
+    //                 });
+    //             }
+                
+    //             scoresArray.push(score);
+    //         }
+
+    //         // Get the smart contract instance
+    //         const contract = getQuizContract(quizAddress);
+
+    //         // Determine the winner before submitting to smart contract
+            
+    //         let highestScore = 0;
+            
+    //         // Find the player with the highest score
+    //         for (let i = 0; i < players.length; i++) {
+    //             if (scoresArray[i] > highestScore) {
+    //                 highestScore = scoresArray[i];
+    //                 this.winner.userAddress = players[i];
+    //                 this.winner.score = scoresArray[i];
+    //             }
+    //         }
+
+    //         // Update the quiz with the winner information
+    //         quiz.winner = this.winner;
+    //         await quiz.save();
+
+    //         // Call the smart contract function - now passing answers as strings directly
+    //         const tx = await contract.submitAllAnswers(players, answersArray, scoresArray);
+    //         await tx.wait(); // Wait for transaction confirmation
+
+    //         console.log('Successfully submitted all answers to smart contract:', {
+    //             players,
+    //             answersArray,
+    //             scoresArray,
+    //             transactionHash: tx.hash
+    //         });
+
+    //         return { success: true };
+
+    //     } catch (error) {
+    //         console.error('Error submitting answers to smart contract:', error);
+    //         throw error;
+    //     }
+    // }
+
+    async getQuizWinner(quizAddress: string): Promise<{ userAddress: string, score: number }> {
+        // Get the quiz by quizAddress and update the winner
+        const quiz = await Quiz.findOne({ quizAddress });         
+        return quiz!.winner;
+    }
+
+
+    async prepareSubmitAllAnswers(quizAddress: string): Promise<{
+        success: boolean;
+        transactionData?: {
+            to: string;
+            data: string;
+            players: string[];
+            answersArray: string[];
+            scoresArray: number[];
+            winner: { userAddress: string, score: number };
+        };
+        error?: string;
+    }> {
         try {
             // Get the quiz data
             const quiz = await Quiz.findOne({ quizAddress });
             if (!quiz) {
-                throw new Error('Quiz not found');
+                return { success: false, error: 'Quiz not found' };
             }
-
+    
             // Get all answers for this quiz
             const answersDoc = await UserAnswers.findOne({ quizAddress });
             if (!answersDoc) {
-                throw new Error('No answers found for this quiz');
+                return { success: false, error: 'No answers found for this quiz' };
             }
-
+    
             const players: string[] = [];
             const answersArray: string[] = [];
             const scoresArray: number[] = [];
-
+    
             // Process each player in the quiz
             for (const playerAddress of quiz.playerAddresses) {
                 players.push(playerAddress);
-
+    
                 // Find this player's answers
                 const participant = answersDoc.participants.find(p => p.userAddress === playerAddress);
                 
@@ -291,7 +394,7 @@ export class QuizService {
                 }
                 
                 answersArray.push(playerAnswersString);
-
+    
                 // Calculate score for this player
                 let score = 0;
                 if (participant) {
@@ -304,185 +407,95 @@ export class QuizService {
                 }
                 
                 scoresArray.push(score);
+
+                // Update the participant's score in the answersDoc
+                if (participant) {
+                    participant.score = score;
+                }
+
             }
 
-            // Get the smart contract instance
-            const contract = getQuizContract(quizAddress);
-
-            // Determine the winner before submitting to smart contract
-            
+            // Save the updated scores to the database
+            await answersDoc.save();
+    
+            // Determine the winner
             let highestScore = 0;
+            let winner = { userAddress: '', score: 0 };
             
-            // Find the player with the highest score
             for (let i = 0; i < players.length; i++) {
                 if (scoresArray[i] > highestScore) {
                     highestScore = scoresArray[i];
-                    this.winner.userAddress = players[i];
-                    this.winner.score = scoresArray[i];
+                    winner.userAddress = players[i];
+                    winner.score = scoresArray[i];
                 }
             }
-
+    
             // Update the quiz with the winner information
-            quiz.winner = this.winner;
+            // this.winner = winner;
+            quiz.winner = winner;
             await quiz.save();
-
-            // Call the smart contract function - now passing answers as strings directly
-            const tx = await contract.submitAllAnswers(players, answersArray, scoresArray);
-            await tx.wait(); // Wait for transaction confirmation
-
-            console.log('Successfully submitted all answers to smart contract:', {
+    
+            // Get the contract interface to encode the function call
+            const contractInterface = getQuizContractInterface();
+            
+            // Encode the function call data
+            const functionData = contractInterface.encodeFunctionData('submitAllAnswers', [
                 players,
                 answersArray,
-                scoresArray,
-                transactionHash: tx.hash
-            });
-
-            return { success: true };
-
+                scoresArray
+            ]);
+    
+            // console.log('Transaction data prepared for frontend signing:', {
+            //     players,
+            //     answersArray,
+            //     scoresArray,
+            //     winner
+            // });
+    
+            return {
+                success: true,
+                transactionData: {
+                    to: quizAddress,
+                    data: functionData,
+                    players,
+                    answersArray,
+                    scoresArray,
+                    winner
+                }
+            };
+    
         } catch (error) {
-            console.error('Error submitting answers to smart contract:', error);
-            throw error;
+            console.error('Error preparing submit all answers transaction:', error);
+            return { 
+                success: false, 
+                error: error instanceof Error ? error.message : 'Unknown error occurred' 
+            };
         }
     }
 
-// --------------------------------------------------------------------------------------------------------------------------
-
-    async determineQuizWinner(quizAddress: string): Promise<{ userAddress: string, score: number } | null> {
-        // Get the quiz by quizAddress and update the winner
+    async getTop3Players(quizAddress: string): Promise<{ userAddress: string, score: number }[]> {
         const quiz = await Quiz.findOne({ quizAddress });
-        if (quiz) {
-            quiz.winner = { userAddress: this.winner.userAddress, score: this.winner.score };
-            await quiz.save();
+        if (!quiz) {
+            console.log('Quiz not found for address:', quizAddress);
+            return [];
         }
-                
-        return this.winner;
-    }
 
+        // Get all answers for this quiz to access participant scores
+        const answersDoc = await UserAnswers.findOne({ quizAddress });
+        if (!answersDoc) {
+            console.log('Answers not found for quiz address:', quizAddress);
+            return [];
+        }
 
+        // Create array of players with their scores
+        const playersWithScores = answersDoc.participants.map(participant => ({
+            userAddress: participant.userAddress,
+            score: participant.score
+        }));
 
-/*
-  // Add this method to your QuizService class in quizService.ts
+        return playersWithScores
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 3); // Take indices 0, 1, and 2
+    }    
 
-  async prepareSubmitAllAnswers(quizAddress: string): Promise<{
-      success: boolean;
-      transactionData?: {
-          to: string;
-          data: string;
-          players: string[];
-          answersArray: string[];
-          scoresArray: number[];
-          winner: { userAddress: string, score: number };
-      };
-      error?: string;
-  }> {
-      try {
-          // Get the quiz data
-          const quiz = await Quiz.findOne({ quizAddress });
-          if (!quiz) {
-              return { success: false, error: 'Quiz not found' };
-          }
-  
-          // Get all answers for this quiz
-          const answersDoc = await UserAnswers.findOne({ quizAddress });
-          if (!answersDoc) {
-              return { success: false, error: 'No answers found for this quiz' };
-          }
-  
-          const players: string[] = [];
-          const answersArray: string[] = [];
-          const scoresArray: number[] = [];
-  
-          // Process each player in the quiz
-          for (const playerAddress of quiz.playerAddresses) {
-              players.push(playerAddress);
-  
-              // Find this player's answers
-              const participant = answersDoc.participants.find(p => p.userAddress === playerAddress);
-              
-              // Build answers string for this player
-              let playerAnswersString = '';
-              for (let questionIndex = 0; questionIndex < quiz.questions.length; questionIndex++) {
-                  if (participant) {
-                      const answer = participant.answers.find(a => a.questionIndex === questionIndex);
-                      if (answer) {
-                          playerAnswersString += answer.selectedOption.toString();
-                      } else {
-                          playerAnswersString += '-1'; // Missing answer
-                      }
-                  } else {
-                      playerAnswersString += '-1'; // Player didn't submit any answers
-                  }
-              }
-              
-              answersArray.push(playerAnswersString);
-  
-              // Calculate score for this player
-              let score = 0;
-              if (participant) {
-                  participant.answers.forEach(answer => {
-                      const question = quiz.questions[answer.questionIndex];
-                      if (question && question.correctAnswer === answer.selectedOption) {
-                          score++;
-                      }
-                  });
-              }
-              
-              scoresArray.push(score);
-          }
-  
-          // Determine the winner
-          let highestScore = 0;
-          let winner = { userAddress: '', score: 0 };
-          
-          for (let i = 0; i < players.length; i++) {
-              if (scoresArray[i] > highestScore) {
-                  highestScore = scoresArray[i];
-                  winner.userAddress = players[i];
-                  winner.score = scoresArray[i];
-              }
-          }
-  
-          // Update the quiz with the winner information
-          this.winner = winner;
-          quiz.winner = winner;
-          await quiz.save();
-  
-          // Get the smart contract instance to encode the function call
-          const contract = getQuizContract(quizAddress);
-          
-          // Encode the function call data
-          const functionData = contract.interface.encodeFunctionData('submitAllAnswers', [
-              players,
-              answersArray,
-              scoresArray
-          ]);
-  
-          console.log('Transaction data prepared for frontend signing:', {
-              players,
-              answersArray,
-              scoresArray,
-              winner
-          });
-  
-          return {
-              success: true,
-              transactionData: {
-                  to: quizAddress,
-                  data: functionData,
-                  players,
-                  answersArray,
-                  scoresArray,
-                  winner
-              }
-          };
-  
-      } catch (error) {
-          console.error('Error preparing submit all answers transaction:', error);
-          return { 
-              success: false, 
-              error: error instanceof Error ? error.message : 'Unknown error occurred' 
-          };
-      }
-  }
-*/
 }

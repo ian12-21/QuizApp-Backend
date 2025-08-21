@@ -10,6 +10,7 @@ interface IUserQuestionAnswer {
 interface IUserAnswers {
   userAddress: string;
   answers: IUserQuestionAnswer[];
+  score: number;
 }
 
 // Define the interface for the entire answers document for a quiz
@@ -27,7 +28,8 @@ const UserQuestionAnswerSchema = new Schema({
 // Create the schema for user answers
 const UserAnswersSchema = new Schema({
   userAddress: { type: String, required: true },
-  answers: [UserQuestionAnswerSchema]
+  answers: [UserQuestionAnswerSchema],
+  score: { type: Number, required: true, default: 0 }
 });
 
 // Create the schema for all quiz answers
