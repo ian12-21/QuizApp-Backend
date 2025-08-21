@@ -282,6 +282,26 @@ app.get('/api/quiz/:quizAddress/top3players', async (req, res) => {
     }
 });
 
+// Search quizzes by name or address
+app.get('/api/quiz/search/results', async (req, res) => {
+    try {
+        const query = req.query.q as string;
+        
+        if (!query) {
+            return res.status(400).json({ error: 'Search query is required' });
+        }
+        
+        const results = await quizService.searchQuizzes(query);
+        res.json(results);
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            res.status(500).json({ error: error.message });
+        } else {
+            res.status(500).json({ error: 'An unknown error occurred' });
+        }
+    }
+});
+
 const PORT = 3000;
 
 // Connect to MongoDB and start the server

@@ -496,6 +496,37 @@ export class QuizService {
         return playersWithScores
             .sort((a, b) => b.score - a.score)
             .slice(0, 3); // Take indices 0, 1, and 2
+    }
+
+    async searchQuizzes(query: string): Promise<{ quizName: string, quizAddress: string, creatorAddress: string, pin: string, answersString: string }[]> {
+        try {
+            if (!query || query.trim() === '') {
+                return [];
+            }
+
+            // Create case-insensitive regex for partial matching
+            const searchRegex = new RegExp(query.trim(), 'i');
+
+            // Search by quiz name or quiz address
+            const quizzes = await Quiz.find({
+                $or: [
+                    { quizName: { $regex: searchRegex } },
+                    { quizAddress: { $regex: searchRegex } }
+                ]
+            }).select('quizName quizAddress creatorAddress pin answersString').limit(10);
+
+            return quizzes;
+        } catch (error) {
+            console.error('Error searching quizzes:', error);
+            throw error;
+        }
     }    
 
 }
+
+
+/*
+@quizService.ts in createquiz function can you create a loop or somethin that for 
+every creation creates a random number of players and random answers based on the number of questions and their answers.
+purpose of this is just to have more data in the quiz @quizService.ts#L479 
+*/ 
