@@ -12,6 +12,7 @@ interface IUserAnswer {
   userAddress: string | null;
   questionIndex: number;
   answer: number;
+  answerTimeMs: number; // Time taken to answer in milliseconds
 }
 
 dotenv.config();
@@ -53,10 +54,21 @@ export class QuizService {
                 throw new Error('Invalid transfer to backend');
             }
 
-            //dummy player addresses
-            playerAddresses.push("0xb742FbB7Af14551aCfbaca23FEDAeE4a680c3E96",
-                                "0x6cfa0Ab2d4206401518b9472f6713AB848b51FA3",
-                                "0x9234567890123456789012345678901234567890");
+            // Generate random number of dummy players (between 3 and 15)
+            const numRandomPlayers = Math.floor(Math.random() * 13) + 3; // 3-15 players
+            const randomPlayerAddresses: string[] = [];
+            
+            // Generate random Ethereum addresses for dummy players
+            for (let i = 0; i < numRandomPlayers; i++) {
+                // Generate a random 40-character hex string for Ethereum address
+                const randomHex = Array.from({length: 40}, () => 
+                    Math.floor(Math.random() * 16).toString(16)
+                ).join('');
+                randomPlayerAddresses.push(`0x${randomHex}`);
+            }
+            
+            // Add random players to the existing player addresses
+            playerAddresses.push(...randomPlayerAddresses);
             
             // Store the quiz in MongoDB
             const newQuiz = new Quiz({
@@ -72,34 +84,34 @@ export class QuizService {
             
             await newQuiz.save();
             
-            // Initialize answers document with dummy data for testing
-            const dummyParticipants = [
-                {
-                    userAddress: "0xb742FbB7Af14551aCfbaca23FEDAeE4a680c3E96",
-                    answers: [
-                        { questionIndex: 0, selectedOption: 1 }, // Answer for question 0
-                        { questionIndex: 1, selectedOption: 2 }  // Answer for question 1
-                    ]
-                },
-                {
-                    userAddress: "0x6cfa0Ab2d4206401518b9472f6713AB848b51FA3",
-                    answers: [
-                        { questionIndex: 0, selectedOption: 1 }, // Answer for question 0
-                        { questionIndex: 1, selectedOption: 1 }  // Answer for question 1
-                    ]
-                },
-                {
-                    userAddress: "0x9234567890123456789012345678901234567890",
-                    answers: [
-                        { questionIndex: 0, selectedOption: 3 }, // Answer for question 0
-                        { questionIndex: 1, selectedOption: 0 }  // Answer for question 1
-                    ]
-                }
-            ];
+            // Generate random participants with random answers and answer times for testing
+            const randomParticipants = randomPlayerAddresses.map(playerAddress => {
+                let totalAnswerTimeMs = 0;
+                const answers = questions.map((question, questionIndex) => {
+                    // Randomly select an answer option (0 to number of answers - 1)
+                    const randomAnswerIndex = Math.floor(Math.random() * question.answers.length);
+                    // Generate random answer time between 2-30 seconds
+                    const randomAnswerTime = Math.floor(Math.random() * 28000) + 2000; // 2000-30000ms
+                    totalAnswerTimeMs += randomAnswerTime;
+                    
+                    return {
+                        questionIndex,
+                        selectedOption: randomAnswerIndex,
+                        answerTimeMs: randomAnswerTime
+                    };
+                });
+                
+                return {
+                    userAddress: playerAddress,
+                    answers,
+                    score: 0,
+                    totalAnswerTimeMs
+                };
+            });
 
             const quizAnswers = new UserAnswers({
                 quizAddress,
-                participants: dummyParticipants
+                participants: randomParticipants
             });
             
             await quizAnswers.save();
@@ -198,9 +210,11 @@ export class QuizService {
                     userAddress: userAnswer.userAddress,
                     answers: [{
                         questionIndex: userAnswer.questionIndex,
-                        selectedOption: userAnswer.answer
+                        selectedOption: userAnswer.answer,
+                        answerTimeMs: userAnswer.answerTimeMs || 0
                     }],
-                    score: 0
+                    score: 0,
+                    totalAnswerTimeMs: userAnswer.answerTimeMs || 0
                 });
             } else {
                 // Check if this question has already been answered
@@ -212,11 +226,19 @@ export class QuizService {
                     // Add new answer
                     answersDoc.participants[participantIndex].answers.push({
                         questionIndex: userAnswer.questionIndex,
-                        selectedOption: userAnswer.answer
+                        selectedOption: userAnswer.answer,
+                        answerTimeMs: userAnswer.answerTimeMs || 0
                     });
+                    // Update total answer time
+                    answersDoc.participants[participantIndex].totalAnswerTimeMs += userAnswer.answerTimeMs || 0;
                 } else {
-                    // Update existing answer
+                    // Update existing answer and adjust total time
+                    const oldTime = answersDoc.participants[participantIndex].answers[answerIndex].answerTimeMs || 0;
                     answersDoc.participants[participantIndex].answers[answerIndex].selectedOption = userAnswer.answer;
+                    answersDoc.participants[participantIndex].answers[answerIndex].answerTimeMs = userAnswer.answerTimeMs || 0;
+                    // Adjust total time (subtract old time, add new time)
+                    answersDoc.participants[participantIndex].totalAnswerTimeMs = 
+                        (answersDoc.participants[participantIndex].totalAnswerTimeMs || 0) - oldTime + (userAnswer.answerTimeMs || 0);
                 }
             }
             
@@ -395,15 +417,24 @@ export class QuizService {
                 
                 answersArray.push(playerAnswersString);
     
-                // Calculate score for this player
+                // Calculate score for this player (correct answers * time factor)
                 let score = 0;
                 if (participant) {
+                    let correctAnswers = 0;
                     participant.answers.forEach(answer => {
                         const question = quiz.questions[answer.questionIndex];
                         if (question && question.correctAnswer === answer.selectedOption) {
-                            score++;
+                            correctAnswers++;
                         }
                     });
+                    
+                    // Time-based scoring: faster answers get higher scores
+                    // Base score = correct answers * 1000
+                    // Time penalty: subtract total time in seconds
+                    // Final score = max(0, (correctAnswers * 1000) - (totalAnswerTimeMs / 1000))
+                    // This keeps scores in 4-5 digit range and rewards speed
+                    const totalTimeSeconds = (participant.totalAnswerTimeMs || 0) / 1000;
+                    score = Math.max(0, Math.round((correctAnswers * 1000) - totalTimeSeconds));
                 }
                 
                 scoresArray.push(score);
@@ -525,8 +556,4 @@ export class QuizService {
 }
 
 
-/*
-@quizService.ts in createquiz function can you create a loop or somethin that for 
-every creation creates a random number of players and random answers based on the number of questions and their answers.
-purpose of this is just to have more data in the quiz @quizService.ts#L479 
-*/ 
+ 
