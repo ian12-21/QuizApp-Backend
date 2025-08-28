@@ -11,7 +11,7 @@ interface IUserAnswer {
   quizAddress: string;
   userAddress: string | null;
   questionIndex: number;
-  answer: number;
+  answer: number | string;
   answerTimeMs: number; // Time taken to answer in milliseconds
 }
 
@@ -54,8 +54,8 @@ export class QuizService {
                 throw new Error('Invalid transfer to backend');
             }
 
-            // Generate random number of dummy players (between 3 and 15)
-            const numRandomPlayers = Math.floor(Math.random() * 13) + 3; // 3-15 players
+            // Generate random number of dummy players (between 3 and 95)
+            const numRandomPlayers = Math.floor(Math.random() * 93) + 3; // 3-95 players
             const randomPlayerAddresses: string[] = [];
             
             // Generate random Ethereum addresses for dummy players
@@ -408,13 +408,12 @@ export class QuizService {
                         if (answer) {
                             playerAnswersString += answer.selectedOption.toString();
                         } else {
-                            playerAnswersString += '-1'; // Missing answer
+                            playerAnswersString += 'X'; // Missing answer
                         }
                     } else {
-                        playerAnswersString += '-1'; // Player didn't submit any answers
+                        playerAnswersString += 'X'; // Player didn't submit any answers
                     }
                 }
-                
                 answersArray.push(playerAnswersString);
     
                 // Calculate score for this player (correct answers * time factor)
@@ -428,22 +427,15 @@ export class QuizService {
                         }
                     });
                     
-                    // Time-based scoring: faster answers get higher scores
-                    // Base score = correct answers * 1000
-                    // Time penalty: subtract total time in seconds
-                    // Final score = max(0, (correctAnswers * 1000) - (totalAnswerTimeMs / 1000))
-                    // This keeps scores in 4-5 digit range and rewards speed
                     const totalTimeSeconds = (participant.totalAnswerTimeMs || 0) / 1000;
                     score = Math.max(0, Math.round((correctAnswers * 1000) - totalTimeSeconds));
-                }
-                
+                }    
                 scoresArray.push(score);
-
+                
                 // Update the participant's score in the answersDoc
                 if (participant) {
                     participant.score = score;
                 }
-
             }
 
             // Save the updated scores to the database

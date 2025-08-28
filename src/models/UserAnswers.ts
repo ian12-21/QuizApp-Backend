@@ -3,7 +3,7 @@ import mongoose, { Schema, Document } from "mongoose";
 // Interface for a single user's answer to a specific question
 interface IUserQuestionAnswer {
   questionIndex: number;
-  selectedOption: number;
+  selectedOption: number | string;
   answerTimeMs: number; // Time taken to answer in milliseconds
 }
 
@@ -24,7 +24,7 @@ export interface IQuizAnswers extends Document {
 // Create the schema for individual answers
 const UserQuestionAnswerSchema = new Schema({
   questionIndex: { type: Number, required: true },
-  selectedOption: { type: Number, required: true },
+  selectedOption: { type: Schema.Types.Mixed, required: true },
   answerTimeMs: { type: Number, required: true, default: 0 },
 });
 
