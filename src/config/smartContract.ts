@@ -1,7 +1,5 @@
 import { ethers } from 'ethers';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import config from './index';
 
 // Smart contract ABI for the submitAllAnswers function
 export const QUIZ_CONTRACT_ABI = [
@@ -32,7 +30,7 @@ export const QUIZ_CONTRACT_ABI = [
 
 // Get provider for read-only operations
 export const getProvider = () => {
-  const rpcUrl = process.env.RPC_URL || 'http://localhost:8545';
+  const rpcUrl = config.rpcUrl;
   return new ethers.JsonRpcProvider(rpcUrl);
 };
 
