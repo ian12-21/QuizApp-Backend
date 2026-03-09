@@ -41,6 +41,7 @@ export class QuizService {
     const numRandomPlayers = Math.floor(Math.random() * 93) + 3;
     const randomPlayerAddresses: string[] = [];
 
+    // Generate random Ethereum addresses for dummy players
     for (let i = 0; i < numRandomPlayers; i++) {
       const randomHex = Array.from({ length: 40 }, () =>
         Math.floor(Math.random() * 16).toString(16)
@@ -50,6 +51,7 @@ export class QuizService {
 
     playerAddresses.push(...randomPlayerAddresses);
 
+    // Create the quiz instance in MongoDB
     const newQuiz = new this.quizModel({
       pin,
       creatorAddress,
@@ -86,6 +88,7 @@ export class QuizService {
       };
     });
 
+    // Create the quiz answers instance for the quiz, with dummy participants generated data
     const quizAnswers = new this.userAnswersModel({
       quizAddress,
       participants: randomParticipants,
@@ -157,10 +160,12 @@ export class QuizService {
       });
     }
 
+    // Find the participant in the answers document
     const participantIndex = answersDoc.participants.findIndex(
       (p) => p.userAddress === userAnswer.userAddress
     );
 
+    // If participant doesn't exist, add them with the new answer. Otherwise, update their existing answer for the question.
     if (participantIndex === -1) {
       answersDoc.participants.push({
         userAddress: userAnswer.userAddress,
@@ -175,10 +180,12 @@ export class QuizService {
         totalAnswerTimeMs: userAnswer.answerTimeMs || 0,
       });
     } else {
+      // Check if the participant already has an answer for this question
       const answerIndex = answersDoc.participants[participantIndex].answers.findIndex(
         (a) => a.questionIndex === userAnswer.questionIndex
       );
 
+      // If no existing answer for the question, add it. Otherwise, update the existing answer and adjust total answer time.
       if (answerIndex === -1) {
         answersDoc.participants[participantIndex].answers.push({
           questionIndex: userAnswer.questionIndex,
@@ -249,11 +256,13 @@ export class QuizService {
       const answersArray: string[] = [];
       const scoresArray: number[] = [];
 
+      // Calculate scores and prepare data for each player
       for (const playerAddress of quiz.playerAddresses) {
         players.push(playerAddress);
 
         const participant = answersDoc.participants.find((p) => p.userAddress === playerAddress);
 
+        // Create a string representation of the player's answers (e.g. "012X1" where each character represents the selected option for a question, and 'X' means unanswered)
         let playerAnswersString = '';
         for (let questionIndex = 0; questionIndex < quiz.questions.length; questionIndex++) {
           if (participant) {
@@ -269,6 +278,7 @@ export class QuizService {
         }
         answersArray.push(playerAnswersString);
 
+        // Calculate score: +1000 points for each correct answer, minus total answer time in seconds. Minimum score is 0.
         let score = 0;
         if (participant) {
           let correctAnswers = 0;
@@ -294,6 +304,7 @@ export class QuizService {
       let highestScore = 0;
       const winner = { userAddress: '', score: 0 };
 
+      // Determine the winner based on the highest score
       for (let i = 0; i < players.length; i++) {
         if (scoresArray[i] > highestScore) {
           highestScore = scoresArray[i];
@@ -305,6 +316,7 @@ export class QuizService {
       quiz.winner = winner;
       await quiz.save();
 
+      // Prepare transaction data for frontend signing
       const contractInterface = this.getContractInterface();
       const functionData = contractInterface.encodeFunctionData('submitAllAnswers', [
         players,
