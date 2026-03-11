@@ -16,6 +16,10 @@ const config = {
     windowMs: 15 * 60 * 1000,
     max: 100,
   },
+  jwt: {
+    secret: process.env.JWT_SECRET || '',
+    expiresIn: process.env.JWT_EXPIRES_IN || '24h',
+  },
 };
 
 export default config;

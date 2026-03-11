@@ -1,13 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
-import { ZodSchema } from 'zod';
+import { z } from 'zod';
 
-export function validate(schema: ZodSchema, source: 'body' | 'query' | 'params' = 'body') {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const validate = (
+  schema: z.ZodType,
+  source: 'body' | 'query' | 'params' = 'body'
+) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
     const result = schema.safeParse(req[source]);
     if (!result.success) {
-      return res.status(400).json({ error: result.error.message });
+      const errors = result.error.issues.map((issue) => ({
+        field: issue.path.join('.'),
+        message: issue.message,
+      }));
+
+      res.status(400).json({ error: 'Validation failed', details: errors });
+      return;
     }
+
+    // Replace the raw input with the parsed (and potentially transformed) data
     req[source] = result.data;
     next();
   };
-}
+};
